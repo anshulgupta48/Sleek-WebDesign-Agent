@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/themeProvider';
+import { QueryProvider } from '@/components/queryProvider';
 import { InsforgeProvider } from '@/components/insforgeProvider';
 import './globals.css';
 
@@ -30,17 +32,21 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     >
       <body className='min-h-full flex flex-col'>
         <InsforgeProvider>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='system'
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              {children}
-              <Toaster richColors />
-            </TooltipProvider>
-          </ThemeProvider>
+          <QueryProvider>
+            <NuqsAdapter>
+              <ThemeProvider
+                attribute='class'
+                defaultTheme='system'
+                enableSystem
+                disableTransitionOnChange
+              >
+                <TooltipProvider>
+                  {children}
+                  <Toaster richColors />
+                </TooltipProvider>
+              </ThemeProvider>
+            </NuqsAdapter>
+          </QueryProvider>
         </InsforgeProvider>
       </body>
     </html>
