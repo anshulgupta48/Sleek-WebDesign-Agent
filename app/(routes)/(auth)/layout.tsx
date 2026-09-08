@@ -1,24 +1,15 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useInsforge } from '@insforge/nextjs';
+import { redirect } from 'next/navigation';
+import { getAuthServer } from '@/lib/insforgeServer';
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { user, isLoaded } = useInsforge();
+  const { user } = await getAuthServer();
 
-  useEffect(() => {
-    if (isLoaded && user) {
-      router.replace('/');
-    }
-  }, [user, isLoaded, router]);
-
-  if (!isLoaded || user) {
-    return null;
+  if (user) {
+    redirect('/');
   }
 
   return <>{children}</>;

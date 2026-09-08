@@ -71,7 +71,7 @@ const NewProjectChat = ({
   };
 
   return (
-    <div className='w-full relative min-h-screen'>
+    <div className='w-full pb-7 relative'>
       <div className='w-full max-w-7xl mx-auto'>
         <div
           className='flex flex-col items-center justify-center
@@ -169,8 +169,6 @@ const ProjectGrid = () => {
     },
   });
 
-  console.log(projects);
-
   if (isLoading) return <ProjectGridSkeleton />;
   if (!projects || projects.length === 0) {
     return null;
@@ -212,7 +210,7 @@ const ProjectGrid = () => {
 };
 
 const ProjectGridSkeleton = () => (
-  <div className='w-full  mx-auto mt-4 px-12 animate-pulse'>
+  <div className='w-full mx-auto mt-4 animate-pulse'>
     <div className='h-4 w-32 bg-muted rounded mb-4 ml-2' />
     <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4'>
       {[1, 2, 3, 4, 5].map((i) => (

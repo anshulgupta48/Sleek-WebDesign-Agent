@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import ChatInterface from '@/components/chat';
 import { Spinner } from '@/components/ui/spinner';
 
+export const dynamic = 'force-dynamic';
+
 const HomePage = () => {
   return (
     <div>
