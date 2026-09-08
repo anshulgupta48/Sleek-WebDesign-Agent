@@ -122,7 +122,7 @@ const NewProjectChat = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className='w-full max-w-3xl'
+            className='w-full max-w-2xl'
           >
             <Suggestions className='justify-center flex-wrap'>
               {suggestions.map((item) => (
@@ -142,7 +142,7 @@ const NewProjectChat = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className='flex justify-center w-full max-w-3xl mx-auto'
+            className='flex justify-center w-full max-w-2xl mx-auto'
           >
             <ProjectGrid />
           </motion.div>
