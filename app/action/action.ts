@@ -1,5 +1,5 @@
 'use server';
-import { UIMessage } from 'ai';
+import { type ModelMessage, UIMessage } from 'ai';
 import { getAuthServer } from '@/lib/insforgeServer';
 import { generateGeminiText } from '@/lib/gemini';
 
@@ -22,10 +22,13 @@ export const generateProjectTitle = async (message: string) => {
   }
 };
 
-export const convertModelMessages = async (messages: UIMessage[]) => {
-  const modelMessages = messages.map((message: UIMessage) => {
+export const convertModelMessages = async (
+  messages: UIMessage[],
+): Promise<ModelMessage[]> => {
+  const modelMessages = messages.map((message: UIMessage): ModelMessage => {
     const contentParts: Array<
-      { type: 'text'; text: string } | { type: 'image'; image: string }
+      | { type: 'text'; text: string }
+      | { type: 'file'; data: string; mediaType: string }
     > = [];
 
     for (const part of message.parts) {
@@ -41,17 +44,36 @@ export const convertModelMessages = async (messages: UIMessage[]) => {
       } else if (part.type === 'file') {
         if (part.mediaType?.startsWith('image/') && part.url) {
           contentParts.push({
-            type: 'image',
-            image: part.url,
+            type: 'file',
+            data: part.url,
+            mediaType: part.mediaType,
           });
         }
       }
     }
 
-    return {
-      role: message.role,
-      content: contentParts.length === 1 ? contentParts[0]?.text : contentParts,
-    };
+    const content =
+      contentParts.length === 1 && contentParts[0]?.type === 'text'
+        ? contentParts[0].text
+        : contentParts;
+
+    switch (message.role) {
+      case 'system':
+        return {
+          role: 'system',
+          content:
+            typeof content === 'string'
+              ? content
+              : content
+                  .filter((part) => part.type === 'text')
+                  .map((part) => part.text)
+                  .join('\n'),
+        };
+      case 'assistant':
+        return { role: 'assistant', content };
+      case 'user':
+        return { role: 'user', content };
+    }
   });
 
   return modelMessages;

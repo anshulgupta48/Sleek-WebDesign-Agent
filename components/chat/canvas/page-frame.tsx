@@ -149,7 +149,7 @@ const PageFrame = ({
           >
             <h5
               className='text-xs pl-3 pr-6 font-medium
-            truncate max-w-[150px]
+            truncate max-w-37.5
             '
             >
               {page.name}
@@ -158,17 +158,19 @@ const PageFrame = ({
             <div className='flex items-center px-2 gap-1'>
               {/* color schema */}
               <Popover open={showColorScheme} onOpenChange={setShowColorScheme}>
-                <PopoverTrigger asChild>
-                  <Button
-                    size='icon'
-                    variant='ghost'
-                    className='p-1! hover:bg-accent
+                <PopoverTrigger
+                  render={
+                    <Button
+                      size='icon'
+                      variant='ghost'
+                      className='p-1! hover:bg-accent
                      size-6! cursor-pointer
                     '
-                  >
-                    <PaintbrushIcon className='size-3.5' />
-                  </Button>
-                </PopoverTrigger>
+                    >
+                      <PaintbrushIcon className='size-3.5' />
+                    </Button>
+                  }
+                />
                 <PopoverContent align='start' className='w-52 p-3'>
                   <p
                     className='text-xs font-semibold
