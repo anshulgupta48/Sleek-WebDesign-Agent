@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { PromptInputMessage } from '../ai-elements/prompt-input';
 import { Suggestion, Suggestions } from '../ai-elements/suggestion';
+import { useAuth } from '@insforge/nextjs';
 
 type PropsType = {
   input: string;
@@ -153,10 +154,13 @@ const NewProjectChat = ({
 };
 
 const ProjectGrid = () => {
+  const { isLoaded, isSignedIn } = useAuth();
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const res = await fetch(`/api/project`);
+      const res = await fetch(`/api/project`, {
+        credentials: 'include',
+      });
       if (!res.ok) return [];
       return res.json() as Promise<
         {
@@ -167,14 +171,15 @@ const ProjectGrid = () => {
         }[]
       >;
     },
+    enabled: isLoaded && isSignedIn,
   });
 
-  if (isLoading) return <ProjectGridSkeleton />;
+  if (!isLoaded || (isSignedIn && isLoading)) return <ProjectGridSkeleton />;
   if (!projects || projects.length === 0) {
     return null;
   }
   return (
-    <div className='w-full mx-auto pt-8 px-8'>
+    <div className='w-full mx-auto pt-8'>
       <h5 className='text-sm font-medium text-muted-foreground mb-4 px-2'>
         Recent Projects
       </h5>

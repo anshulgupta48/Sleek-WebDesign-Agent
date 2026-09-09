@@ -12,6 +12,7 @@ function extractAndStoreToken() {
 
   if (accessToken) {
     insforge.setAccessToken(accessToken);
+    document.cookie = `insforge_access_token=${accessToken}; expires=${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString()}; path=/`;
 
     const cleanUrl = new URL(window.location.href);
     cleanUrl.searchParams.delete('access_token');
@@ -22,6 +23,7 @@ function extractAndStoreToken() {
     window.history.replaceState({}, document.title, cleanUrl.toString());
     return true;
   }
+
   return false;
 }
 

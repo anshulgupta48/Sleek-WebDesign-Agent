@@ -35,7 +35,9 @@ const ChatInterface = ({
   const { data: projectData, isLoading: isProjectLoading } = useQuery({
     queryKey: ['project', slugId],
     queryFn: async () => {
-      const res = await fetch(`/api/project/${slugId}`);
+      const res = await fetch(`/api/project/${slugId}`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Failed to fetch project');
       return res.json() as Promise<{
         title: string;
@@ -54,6 +56,7 @@ const ChatInterface = ({
       api: '/api/project',
       prepareSendMessagesRequest: ({ messages, body }) => {
         return {
+          credentials: 'include',
           body: {
             ...body,
             messages,

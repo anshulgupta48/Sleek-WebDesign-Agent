@@ -16,6 +16,7 @@ import {
   WEB_ANALYSIS_PROMPT,
   WEB_GENERATION_PROMPT,
 } from '@/lib/prompt';
+import { generateGeminiText, streamGeminiText } from '@/lib/gemini';
 
 class AbortError extends Error {
   constructor() {
@@ -32,19 +33,20 @@ export async function GET() {
 
     const { data: projects, error } = await insforge.database
       .from('projects')
-      .select('id, title, slugId, createdAt')
-      .order('createdAt', { ascending: false })
+      .select('id, title, slugId, created_at')
+      .filter('userId', 'eq', user.id)
+      .order('created_at', { ascending: false })
       .limit(10);
 
-    if (error)
-      NextResponse.json(
+    if (error) {
+      console.error('[project GET] Failed to fetch projects:', error);
+      return NextResponse.json(
         { error: 'Failed to fetch projects' },
-        {
-          status: 400,
-        },
+        { status: 400 },
       );
+    }
 
-    return NextResponse.json(projects);
+    return NextResponse.json(projects ?? []);
   } catch (error) {
     console.log(error);
     return NextResponse.json(
@@ -151,13 +153,9 @@ async function runGenerationWorker({
             .join('\n\n')
         : 'No previous pages';
 
-    const result = await insforge.ai.chat.completions.create({
-      model: 'google/gemini-3.1-pro-preview',
+    const htmlResult = await generateGeminiText({
+      system: WEB_GENERATION_PROMPT,
       messages: [
-        {
-          role: 'system',
-          content: WEB_GENERATION_PROMPT,
-        },
         {
           role: 'user',
           content: `
@@ -193,11 +191,10 @@ ${page.rootStyles}
         Generate the complete, production-ready HTML for "${page.name}" now:`.trim(),
         },
       ],
-      webSearch: { enabled: false },
-      maxTokens: 30000,
+      maxOutputTokens: 30000,
     });
 
-    let htmlContent = result.choices[0].message.content ?? '';
+    let htmlContent = htmlResult;
     const match = htmlContent.match(/<div[\s\S]*<\/div>/);
     htmlContent = match ? match[0] : htmlContent;
     htmlContent = htmlContent.replace(/```/g, '');
@@ -268,29 +265,22 @@ ${page.rootStyles}
     { id: 'gen-card' },
   );
 
-  const summaryResult = await insforge.ai.chat.completions.create({
-    model: 'google/gemini-2.5-flash-lite',
-    messages: [
-      {
-        role: 'system',
-        content: `You are Sleek, an AI web design agent. You just finished building pages.
+  const summaryResult = streamGeminiText({
+    system: `You are Sleek, an AI web design agent. You just finished building pages.
 Write 1-2 sentences in first person. Natural, confident. No questions. No "let me know".`,
-      },
+    messages: [
       {
         role: 'user',
         content: `Designed: ${pages.map((p: any) => p.name).join(', ')} for: "${latestUserMessage}". Summarize briefly.`,
       },
     ],
-    stream: true,
-    webSearch: { enabled: false },
   });
 
   const summaryId = generateId();
   let fullSummaryText = '';
 
   writer.write({ type: 'text-start', id: summaryId });
-  for await (const chunk of summaryResult) {
-    const delta = chunk.choices[0].delta?.content || '';
+  for await (const delta of summaryResult.textStream) {
     fullSummaryText += delta;
     if (delta) {
       writer.write({ type: 'text-delta', id: summaryId, delta: delta });
@@ -367,13 +357,9 @@ async function runRegenerateWorker({
     { id: 'gen-card' },
   );
 
-  const result = await insforge.ai.chat.completions.create({
-    model: 'google/gemini-3-flash-preview',
+  const htmlResult = await generateGeminiText({
+    system: WEB_GENERATION_PROMPT,
     messages: [
-      {
-        role: 'system',
-        content: WEB_GENERATION_PROMPT,
-      },
       {
         role: 'user',
         content: `
@@ -387,11 +373,10 @@ async function runRegenerateWorker({
                 Return the full page HTML with only the requested change. Start with <div.`.trim(),
       },
     ],
-    webSearch: { enabled: false },
-    maxTokens: 28000,
+    maxOutputTokens: 28000,
   });
 
-  let htmlContent = result.choices[0].message.content ?? '';
+  let htmlContent = htmlResult;
   const match = htmlContent.match(/<div[\s\S]*<\/div>/);
   htmlContent = match ? match[0] : htmlContent;
   htmlContent = htmlContent.replace(/```/g, '');
@@ -439,29 +424,22 @@ async function runRegenerateWorker({
     { id: 'gen-card' },
   );
 
-  const summaryResult = await insforge.ai.chat.completions.create({
-    model: 'google/gemini-2.5-flash-lite',
-    messages: [
-      {
-        role: 'system',
-        content: `You are Sleek, an AI web design agent. You just finished building pages.
+  const summaryResult = streamGeminiText({
+    system: `You are Sleek, an AI web design agent. You just finished building pages.
 Write 1-2 sentences in first person. Natural, confident. No questions. No "let me know".`,
-      },
+    messages: [
       {
         role: 'user',
         content: `Updated: ${updatedPage.name} for: "${latestUserMessage}". Summarize briefly.`,
       },
     ],
-    stream: true,
-    webSearch: { enabled: false },
   });
 
   const summaryId = generateId();
   let fullSummaryText = '';
 
   writer.write({ type: 'text-start', id: summaryId });
-  for await (const chunk of summaryResult) {
-    const delta = chunk.choices[0].delta?.content || '';
+  for await (const delta of summaryResult.textStream) {
     fullSummaryText += delta;
     if (delta) {
       writer.write({ type: 'text-delta', id: summaryId, delta: delta });
@@ -503,7 +481,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { user, insforge } = await getAuthServer();
-    if (!user?.id)
+    if (!user)
       return NextResponse.json(
         {
           error: 'Unauthorized',
@@ -572,10 +550,8 @@ export async function POST(request: NextRequest) {
         (part) => part.type === 'file' && part.mediaType.startsWith('image/'),
       )
       .map((p: any) => ({
-        type: 'image_url' as const,
-        image_url: {
-          url: p.url,
-        },
+        type: 'image' as const,
+        image: p.url,
       }));
 
     const { data: selectedPage } = selectedPageId
@@ -604,22 +580,11 @@ export async function POST(request: NextRequest) {
               },
               { id: 'proj-title', transient: true },
             );
-            // writer.write({
-            //   type: "data-project-title",
-            //   data: {
-            //     title: project.title
-            //   },
-            //   transient: true,
-            // })
 
             checkAbort();
-            const result = await insforge.ai.chat.completions.create({
-              model: 'anthropic/claude-sonnet-4.5',
+            const classifyOutput = await generateGeminiText({
+              system: SLEEK_INTENT_PROMPT,
               messages: [
-                {
-                  role: 'system',
-                  content: SLEEK_INTENT_PROMPT,
-                },
                 {
                   role: 'user',
                   content: `${latestUserMessage}\nCLASSIFY THE INTENT NOW. ONE WORD ONLY`,
@@ -627,9 +592,7 @@ export async function POST(request: NextRequest) {
               ],
             });
 
-            const classify_output = result.choices[0].message.content
-              .trim()
-              .toLowerCase();
+            const classify_output = classifyOutput.trim().toLowerCase();
 
             const firstWord = classify_output.split(' ')[0];
             const validIntents = ['chat', 'generate', 'regenerate'];
@@ -641,17 +604,9 @@ export async function POST(request: NextRequest) {
 
             // CLASSIFICATION MATCHES CHAT
             if (classification.intent === 'chat') {
-              const chatResult = await insforge.ai.chat.completions.create({
-                model: 'google/gemini-2.5-pro',
-                messages: [
-                  {
-                    role: 'system',
-                    content: SLEEK_CHAT_PROMPT,
-                  },
-                  ...modelMessages,
-                ],
-                stream: true,
-                webSearch: { enabled: false },
+              const chatResult = streamGeminiText({
+                system: SLEEK_CHAT_PROMPT,
+                messages: modelMessages,
               });
 
               const chatId = generateId();
@@ -659,9 +614,8 @@ export async function POST(request: NextRequest) {
 
               writer.write({ type: 'text-start', id: chatId });
 
-              for await (const chunk of chatResult) {
+              for await (const delta of chatResult.textStream) {
                 checkAbort();
-                const delta = chunk.choices[0]?.delta?.content || '';
                 chatText += delta;
                 if (delta) {
                   writer.write({
@@ -705,13 +659,10 @@ export async function POST(request: NextRequest) {
 
             genCardEmitted = true;
 
-            const analysisResult = await insforge.ai.chat.completions.create({
-              model: 'anthropic/claude-sonnet-4.5',
+            const analysisText = await generateGeminiText({
+              model: 'gemini-3.6-flash',
+              system: WEB_ANALYSIS_PROMPT,
               messages: [
-                {
-                  role: 'system',
-                  content: WEB_ANALYSIS_PROMPT,
-                },
                 {
                   role: 'user',
                   content: [
@@ -744,14 +695,12 @@ export async function POST(request: NextRequest) {
                   ],
                 },
               ],
-              maxTokens: 28000,
+              maxOutputTokens: 28000,
             });
 
             checkAbort();
 
             let analysis: any;
-            const analysisText =
-              analysisResult.choices[0].message.content || '{}';
 
             try {
               const jsonStart = analysisText.indexOf('{');
@@ -791,7 +740,7 @@ export async function POST(request: NextRequest) {
             });
           }
         } catch (error) {
-          console.log(error);
+          console.error('[project generation]', error);
           if (error instanceof AbortError) {
             if (genCardEmitted) {
               emit(
@@ -818,7 +767,7 @@ export async function POST(request: NextRequest) {
       stream: uiStream,
     });
   } catch (error) {
-    console.log(error);
+    console.error('[project POST]', error);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

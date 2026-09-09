@@ -1,4 +1,16 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) web-design agent. Users describe a site in chat, review generated pages on the canvas, iterate on a selected page, and persist the resulting HTML in InsForge.
+
+Gemini powers title generation, intent classification, chat, design analysis, HTML generation, and regeneration through the Vercel AI SDK. InsForge remains responsible for authentication and project data.
+
+## Environment
+
+Create `.env.local` with the existing InsForge values and a Google AI Studio key:
+
+```bash
+GOOGLE_GENERATIVE_AI_API_KEY=your-google-ai-studio-key
+```
+
+The Gemini integration uses `gemini-3.6-flash` by default. Never expose this key with a `NEXT_PUBLIC_` prefix.
 
 ## Getting Started
 

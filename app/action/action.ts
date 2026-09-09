@@ -1,29 +1,20 @@
 'use server';
 import { UIMessage } from 'ai';
 import { getAuthServer } from '@/lib/insforgeServer';
+import { generateGeminiText } from '@/lib/gemini';
 
 export const generateProjectTitle = async (message: string) => {
   try {
-    const { insforge } = await getAuthServer();
-    const result = await insforge.ai.chat.completions.create({
-      model: 'google/gemini-2.5-flash-lite',
-      messages: [
-        {
-          role: 'system',
-          content: `
+    const text = await generateGeminiText({
+      system: `
     You are an AI assistant that generates very short project names based on the user's prompt.
     - Keep it under 5 words.
     - Capitalize words appropriately.
     - Do not include special characters.
     - Return ONLY the name, nothing else.`,
-        },
-        {
-          role: 'user',
-          content: message,
-        },
-      ],
+      messages: [{ role: 'user', content: message }],
     });
-    const text = result.choices[0].message.content;
+
     return text.trim() || 'Untitled Project';
   } catch (error) {
     console.log(error, 'Project title error');
@@ -33,7 +24,9 @@ export const generateProjectTitle = async (message: string) => {
 
 export const convertModelMessages = async (messages: UIMessage[]) => {
   const modelMessages = messages.map((message: UIMessage) => {
-    const contentParts: any[] = [];
+    const contentParts: Array<
+      { type: 'text'; text: string } | { type: 'image'; image: string }
+    > = [];
 
     for (const part of message.parts) {
       if (
@@ -43,7 +36,7 @@ export const convertModelMessages = async (messages: UIMessage[]) => {
       ) {
         contentParts.push({
           type: 'text',
-          part: part.text,
+          text: part.text,
         });
       } else if (part.type === 'file') {
         if (part.mediaType?.startsWith('image/') && part.url) {
@@ -55,14 +48,9 @@ export const convertModelMessages = async (messages: UIMessage[]) => {
       }
     }
 
-    const content =
-      contentParts.length === 1 && contentParts?.[0].type === 'text'
-        ? contentParts[0].text
-        : contentParts;
-
     return {
       role: message.role,
-      content,
+      content: contentParts.length === 1 ? contentParts[0]?.text : contentParts,
     };
   });
 
