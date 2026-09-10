@@ -178,4 +178,4 @@ This ensures reliable multi-page creation and canvas manipulation without introd
 
 ## Notes
 
-The application relies on valid runtime credentials for InsForge and Google Gemini-SDK. While public views operate independently, full AI page generation, chat streaming, and project persistence require properly initialized environment variables.
+The application relies on valid runtime credentials for InsForge and Google Gemini. While public views operate independently, full AI page generation, chat streaming, and project persistence require properly initialized environment variables.
