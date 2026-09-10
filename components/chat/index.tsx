@@ -233,7 +233,7 @@ const ChatInterface = ({
       '
       >
         <div
-          className='w-full absolute left-0 top-0 z-10 pb-2
+          className='w-full absolute left-0 top-0 z-10 p-2
         bg-background
         '
         >
@@ -255,7 +255,7 @@ const ChatInterface = ({
         </div>
 
         <ChatPanel
-          className='h-full pt-8'
+          className='h-full pt-10'
           messages={messages}
           input={input}
           setInput={setInput}

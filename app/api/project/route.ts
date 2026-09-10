@@ -660,7 +660,7 @@ export async function POST(request: NextRequest) {
             genCardEmitted = true;
 
             const analysisText = await generateGeminiText({
-              model: 'gemini-3.6-flash',
+              model: 'gemini-3.5-flash-lite',
               system: WEB_ANALYSIS_PROMPT,
               messages: [
                 {

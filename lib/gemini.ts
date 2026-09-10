@@ -2,7 +2,7 @@ import { google } from '@ai-sdk/google';
 import { generateText, streamText, type ModelMessage } from 'ai';
 
 export const generateGeminiText = async ({
-  model = 'gemini-3.6-flash',
+  model = 'gemini-3.5-flash-lite',
   system,
   messages,
   maxOutputTokens,
@@ -23,7 +23,7 @@ export const generateGeminiText = async ({
 };
 
 export const streamGeminiText = ({
-  model = 'gemini-3.6-flash',
+  model = 'gemini-3.5-flash-lite',
   system,
   messages,
 }: {
